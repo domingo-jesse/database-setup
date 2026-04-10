@@ -4,12 +4,28 @@ from urllib.parse import urlparse
 import streamlit as st
 from supabase import create_client
 
+
+def _secret(*keys: str) -> str:
+    for key in keys:
+        value = st.secrets.get(key)
+        if value:
+            return str(value)
+
+    supabase_section = st.secrets.get("supabase")
+    if isinstance(supabase_section, dict):
+        for key in keys:
+            value = supabase_section.get(key)
+            if value:
+                return str(value)
+
+    return ""
+
 st.set_page_config(page_title="Simple DB Insert", page_icon="🗄️")
 st.title("Simple Supabase Insert")
 
 
 def _validate_supabase_url(url: str) -> str:
-    cleaned = url.strip()
+    cleaned = url.strip().strip("'\"").rstrip("/")
     if not cleaned:
         raise ValueError("Set SUPABASE_URL in Streamlit secrets.")
 
@@ -35,8 +51,8 @@ def _validate_supabase_url(url: str) -> str:
 
 
 def get_supabase_client():
-    url = _validate_supabase_url(str(st.secrets.get("SUPABASE_URL", "")))
-    key = str(st.secrets.get("SUPABASE_KEY", "")).strip()
+    url = _validate_supabase_url(_secret("SUPABASE_URL", "url"))
+    key = _secret("SUPABASE_KEY", "key").strip()
     if not key:
         raise ValueError("Set SUPABASE_KEY in Streamlit secrets.")
     return create_client(url, key)
